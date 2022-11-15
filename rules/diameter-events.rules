@@ -1,0 +1,1 @@
+alert diameter any any -> any 3868 (msg:"SURICATA Diameter empty message"; sid:2260006; rev:1;)
