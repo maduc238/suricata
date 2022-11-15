@@ -11,8 +11,7 @@ Introduction
 
 Installation
 ------------
-
-https://suricata.readthedocs.io/en/latest/install.html
+Hướng dẫn sẽ được viết sau :))
 
 User Guide
 ----------
