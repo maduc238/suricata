@@ -9,6 +9,8 @@ Introduction
 
 [Suricata](https://suricata.io) is a network IDS, IPS and NSM engine developed by the [OISF](https://oisf.net) and the Suricata community.
 
+Fork này thêm tính năng cho bản tin Diameter
+
 Installation
 ------------
 Hướng dẫn sẽ được viết sau :))
