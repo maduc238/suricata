@@ -52,7 +52,10 @@ Install
 make
 sudo make install
 ```
-
+## Test file `.pcap`
+```
+suricata -c suricata.yaml -r file.pcap -v -k none
+```
 # User Guide
 
 Bạn có thể đọc tài liệu hướng dẫn tại đây: [Suricata user guide](https://suricata.readthedocs.io/en/latest/)
