@@ -5,7 +5,7 @@
 
 # Introduction
 
-[Suricata](https://suricata.io) is a network IDS, IPS and NSM engine developed by the [OISF](https://oisf.net) and the Suricata community.
+[Suricata](https://suricata.io) là một công cụ mạng IDS, IPS và NSM engine được phát triển bởi [OISF](https://oisf.net) và Suricata community.
 
 Fork này thêm tính năng cho bản tin Diameter
 
@@ -21,7 +21,6 @@ sudo apt-get install libpcre3 libpcre3-dbg libpcre3-dev build-essential libpcap-
                 python-yaml rustc cargo
 sudo apt install libpcre2-dev libjansson-dev
 ```
-
 `cbindgen v0.24.3`
 ```
 cargo install --force cbindgen
@@ -56,7 +55,7 @@ sudo make install
 
 # User Guide
 
-You can follow the [Suricata user guide](https://suricata.readthedocs.io/en/latest/) to get started.
+Bạn có thể đọc tài liệu hướng dẫn tại đây: [Suricata user guide](https://suricata.readthedocs.io/en/latest/)
 
 # Contributing
 
@@ -64,18 +63,7 @@ We're happily taking patches and other contributions. Please see https://redmine
 
 Suricata is a complex piece of software dealing with mostly untrusted input. Mishandling this input will have serious consequences:
 
-* in IPS mode a crash may knock a network offline;
-* in passive mode a compromise of the IDS may lead to loss of critical and confidential data;
-* missed detection may lead to undetected compromise of the network.
-
-In other words, we think the stakes are pretty high, especially since in many common cases the IDS/IPS will be directly reachable by an attacker.
-
-For this reason, we have developed a QA process that is quite extensive. A consequence is that contributing to Suricata can be a somewhat lengthy process.
-
-On a high level, the steps are:
-
-1. Github-CI based checks. This runs automatically when a pull request is made.
-
-2. Review by devs from the team and community
-
-3. QA runs from private QA setups. These are private due to the nature of the test traffic.
+Suricata là một phần mềm phức tạp, nó sẽ xử lý hầu hết các dữ liệu mạng vào không tin cậy. Xử lý sai dữ liệu sẽ gây ra hậu quả:
+- Trong IPS mode có thể khiến mạng của bạn offline;
+- Ở passive moode, sử dụng IDS có thể gây mất dữ liệu quan trọng và bí mật;
+- Không lọc mạng kỹ sẽ kiến mạng bị xâm phạm mà ta không biết trước
