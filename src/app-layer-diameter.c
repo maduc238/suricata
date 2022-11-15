@@ -16,7 +16,6 @@
  */
 
 /*
- * TODO: Update \author in this file and app-layer-diameter.h.
  * TODO: Implement your app-layer logic with unit tests.
  * TODO: Remove SCLogNotice statements or convert to debug.
  */
