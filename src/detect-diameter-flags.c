@@ -46,11 +46,11 @@ static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
         Flow *_f, const uint8_t flow_flags,
         void *txv, const int list_id);
 #ifdef UNITTESTS
-static void DetectDiameterflagsRegisterTests(void);
+static void DetectDiameterFlagsRegisterTests(void);
 #endif
 static int g_diameter_flags_id = 0;
 
-void DetectDiameterflagsRegister(void)
+void DetectDiameterFlagsRegister(void)
 {
     sigmatch_table[DETECT_AL_DIAMETER_FLAGS].name = "diameter_flags";
     sigmatch_table[DETECT_AL_DIAMETER_FLAGS].desc =
@@ -59,7 +59,7 @@ void DetectDiameterflagsRegister(void)
     // sigmatch_table[DETECT_AL_DIAMETER_FLAGS].Free  = DetectDiameterFlagFree;
 #ifdef UNITTESTS
     sigmatch_table[DETECT_AL_DIAMETER_FLAGS].RegisterTests =
-        DetectDiameterflagsRegisterTests;
+        DetectDiameterFlagsRegisterTests;
 #endif
 
     sigmatch_table[DETECT_AL_DIAMETER_FLAGS].flags |= SIGMATCH_NOOPT;
@@ -121,12 +121,9 @@ static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
         const uint8_t *data = NULL;
         uint32_t data_len = 0;
 
-        if (flow_flags & STREAM_TOSERVER) {
-            data = tx->request_buffer;
-            data_len = tx->request_buffer_len;
-        } else if (flow_flags & STREAM_TOCLIENT) {
-            data = tx->response_buffer;
-            data_len = tx->response_buffer_len;
+        if (flow_flags) {
+            data = tx->data;
+            data_len = tx->data_len;
         } else {
             return NULL; /* no buffer */
         }

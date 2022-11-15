@@ -232,6 +232,8 @@
 #include "detect-quic-cyu-hash.h"
 #include "detect-quic-cyu-string.h"
 
+#include "detect-diameter-commandcode.h"
+#include "detect-diameter-flags.h"
 #include "detect-template-buffer.h"
 #include "detect-bypass.h"
 #include "detect-ftpdata.h"
@@ -678,6 +680,8 @@ void SigTableSetup(void)
     DetectQuicCyuHashRegister();
     DetectQuicCyuStringRegister();
 
+    DetectDiameterCommandCodeRegister();
+    DetectDiameterFlagsRegister();
     DetectTemplateBufferRegister();
     DetectBypassRegister();
     DetectConfigRegister();

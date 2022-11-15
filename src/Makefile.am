@@ -323,7 +323,8 @@ noinst_HEADERS = \
 	detect-tcp-seq.h \
 	detect-tcp-window.h \
 	detect-template2.h \
-	detect-diameter-avpcode.h \
+	detect-diameter-commandcode.h \
+	detect-diameter-flags.h \
 	detect-template-buffer.h \
 	detect-template.h \
 	detect-template-rust-buffer.h \
@@ -935,7 +936,8 @@ libsuricata_c_a_SOURCES = \
 	detect-tcp-seq.c \
 	detect-tcp-window.c \
 	detect-template2.c \
-	detect-diameter-avpcode.c \
+	detect-diameter-commandcode.c \
+	detect-diameter-flags.c \
 	detect-template-buffer.c \
 	detect-template.c \
 	detect-template-rust-buffer.c \

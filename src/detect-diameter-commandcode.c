@@ -54,7 +54,7 @@ void DetectDiameterCommandCodeRegister(void)
 {
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].name = "diameter.commandcode";
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].desc = "match on Diameter Command Code";
-    sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].AppLayerTxMatch = DetectDiameterMatch;
+    // sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].AppLayerTxMatch = DetectDiameterMatch;
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].Setup = DetectDiameterCommandCodeSetup;
 #ifdef UNITTESTS
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].RegisterTests =
@@ -141,7 +141,7 @@ static int DetectDiameterMatch(DetectEngineThreadCtx *det_ctx,
 {
     // const DetectDiameterStateData *ssd = (const DetectSslStateData *)m;
     // DiameterTransaction *tx = txv;
-    if (tx->data_len <= 20) return 0;
+    // if (ctx->data_len <= 20) return 0;
     // DiameterMessageHeader mess ReadDiameterHeaderData(tx->data, tx->data_len);
     // if (mess)
 
