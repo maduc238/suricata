@@ -109,7 +109,7 @@ static DiameterTransaction *DiameterTxAlloc(DiameterState *state)
     }
 
     /* Increment the transaction ID on the state each time one is llocated. */
-    state->transaction_max++;
+    // state->transaction_max++;
 
     TAILQ_INSERT_TAIL(&state->tx_list, tx, next);
 
@@ -193,13 +193,14 @@ static AppProto DiameterProbingParser(Flow *f, uint8_t direction,
 {
     /* Kiểm tra Diameter ở đây. */
     if (input_len > DIAMETER_MIN_FRAME_LEN) {
-        SCLogNotice("Detected as ALPROTO_DIAMETER");
+        // SCLogNotice("Detected as ALPROTO_DIAMETER");
         return ALPROTO_DIAMETER;
     }
     // SCLogInfo("Protocol not detected as ALPROTO_DIAMETER.");
     return ALPROTO_UNKNOWN;
 }
 
+/* Decode bản tin đọc header ở đây */
 static AppLayerResult DiameterDecode(Flow *f, uint8_t direction, void *alstate,
         AppLayerParserState *pstate, StreamSlice stream_slice)
 {
@@ -207,8 +208,6 @@ static AppLayerResult DiameterDecode(Flow *f, uint8_t direction, void *alstate,
     const uint8_t *input = StreamSliceGetData(&stream_slice);
     uint32_t input_len = StreamSliceGetDataLen(&stream_slice);
     // const uint8_t flags = StreamSliceGetFlags(&stream_slice);
-
-    SCLogNotice("Parsing diameter message: len=%"PRIu32, input_len);
 
     if (input == NULL &&
         ((direction == 0 && AppLayerParserStateIssetFlag(pstate, APP_LAYER_PARSER_EOF_TS)) ||
@@ -219,11 +218,23 @@ static AppLayerResult DiameterDecode(Flow *f, uint8_t direction, void *alstate,
         SCReturnStruct(APP_LAYER_ERROR);
     }
 
+
+    /* Check có đúng là Diameter không */
+    DiameterMessageHeader diameter_header = ReadDiameterHeaderData(input, input_len);
+    if (diameter_header.Length != input_len) {
+        SCLogNotice("Bản tin Diameter nhận diện không đúng");
+        SCReturnStruct(APP_LAYER_ERROR);
+    }
+    SCLogNotice("Parsing diameter message: len=%"PRIu32". CommandCode=%"PRIu32, input_len, diameter_header.CommandCode);
+    // SCLogNotice("Transaction max=%"PRIu64, state->transaction_max);
+
+    /* Tạo Tx cho bản tin này */
     DiameterTransaction *tx = DiameterTxAlloc(state);
     if (unlikely(tx == NULL)) {
         SCLogNotice("Failed to allocate new Diameter tx.");
         goto end;
     }
+
     /* Make a copy of the message. */
     tx->data = SCCalloc(1, input_len);
     if (unlikely(tx->data == NULL)) {
