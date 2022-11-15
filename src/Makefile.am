@@ -51,6 +51,7 @@ noinst_HEADERS = \
 	app-layer-snmp.h \
 	app-layer-ssh.h \
 	app-layer-ssl.h \
+	app-layer-diameter.h \
 	app-layer-template.h \
 	app-layer-template-rust.h \
 	app-layer-tftp.h \
@@ -322,6 +323,7 @@ noinst_HEADERS = \
 	detect-tcp-seq.h \
 	detect-tcp-window.h \
 	detect-template2.h \
+	detect-diameter-avpcode.h \
 	detect-template-buffer.h \
 	detect-template.h \
 	detect-template-rust-buffer.h \
@@ -427,6 +429,7 @@ noinst_HEADERS = \
 	output-json-snmp.h \
 	output-json-ssh.h \
 	output-json-stats.h \
+	output-json-diameter.h \
 	output-json-template.h \
 	output-json-template-rust.h \
 	output-json-tftp.h \
@@ -663,6 +666,7 @@ libsuricata_c_a_SOURCES = \
 	app-layer-snmp.c \
 	app-layer-ssh.c \
 	app-layer-ssl.c \
+	app-layer-diameter.c \
 	app-layer-template.c \
 	app-layer-template-rust.c \
 	app-layer-tftp.c \
@@ -931,6 +935,7 @@ libsuricata_c_a_SOURCES = \
 	detect-tcp-seq.c \
 	detect-tcp-window.c \
 	detect-template2.c \
+	detect-diameter-avpcode.c \
 	detect-template-buffer.c \
 	detect-template.c \
 	detect-template-rust-buffer.c \
@@ -1036,6 +1041,7 @@ libsuricata_c_a_SOURCES = \
 	output-json-snmp.c \
 	output-json-ssh.c \
 	output-json-stats.c \
+	output-json-diameter.c \
 	output-json-template.c \
 	output-json-template-rust.c \
 	output-json-tftp.c \
