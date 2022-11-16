@@ -45,6 +45,10 @@ static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
         const DetectEngineTransforms *transforms,
         Flow *_f, const uint8_t flow_flags,
         void *txv, const int list_id);
+static int DetectDiameterMatch(DetectEngineThreadCtx *det_ctx,
+                               Flow *f, uint8_t flags, void *state, void *txv, const Signature *s,
+                               const SigMatchCtx *ctx);
+static void DetectDiameterCommandcodeFree(DetectEngineCtx *de_ctx, void *ptr);
 #ifdef UNITTESTS
 static void DetectDiameterCommandCodeRegisterTests(void);
 #endif
@@ -53,30 +57,94 @@ static int g_diameter_commandcode_id = 0;
 void DetectDiameterCommandCodeRegister(void)
 {
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].name = "diameter.commandcode";
-    sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].desc = "match on Diameter Command Code";
-    // sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].AppLayerTxMatch = DetectDiameterMatch;
+    sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].desc = "Match on Diameter Command Code";
+    sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].url = "/rules/diameter-keywords/html#diameter.commandcode";
+    sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].AppLayerTxMatch = DetectDiameterMatch;
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].Setup = DetectDiameterCommandCodeSetup;
+    sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].Free = DetectDiameterCommandcodeFree;
 #ifdef UNITTESTS
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].RegisterTests =
         DetectDiameterCommandCodeRegisterTests;
 #endif
 
-    sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].flags |= SIGMATCH_NOOPT;
+    // sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].flags |= SIGMATCH_NOOPT;
 
-    /* register inspect engines - these are called per signature */
+    /*
     DetectAppLayerInspectEngineRegister2("diameter.commandcode", ALPROTO_DIAMETER, SIG_FLAG_TOSERVER, 0, DetectEngineInspectBufferGeneric, GetData);
     DetectAppLayerInspectEngineRegister2("diameter.commandcode", ALPROTO_DIAMETER, SIG_FLAG_TOCLIENT, 0, DetectEngineInspectBufferGeneric, GetData);
 
-    /* register mpm engines - these are called in the prefilter stage */
     DetectAppLayerMpmRegister2("diameter.commandcode", SIG_FLAG_TOSERVER, 0, PrefilterGenericMpmRegister, GetData, ALPROTO_DIAMETER, 0);
     DetectAppLayerMpmRegister2("diameter.commandcode", SIG_FLAG_TOCLIENT, 0, PrefilterGenericMpmRegister, GetData, ALPROTO_DIAMETER, 0);
+    */
 
-
-    g_diameter_commandcode_id = DetectBufferTypeGetByName("diameter.commandcode");
+    g_diameter_commandcode_id = DetectBufferTypeRegister("diameter.commandcode");
 
     /* NOTE: You may want to change this to SCLogNotice during development. */
     SCLogDebug("Diameter application layer detect registered.");
 }
+
+static void DetectDiameterCommandcodeFree(DetectEngineCtx *de_ctx, void *ptr)
+{
+    if (ptr != NULL)
+        SCFree(ptr);
+}
+
+/**
+ * \brief This function is used to parse ssl_version data passed via
+ *        keyword: "ssl_version"
+ *
+ * \param de_ctx Pointer to the detection engine context
+ * \param str Pointer to the user provided options
+ *
+ * \retval ssl pointer to DetectSslVersionData on success
+ * \retval NULL on failure
+ */
+
+static DetectDiameterCommandcodeData *DetectDiameterCommandcodeParse(DetectEngineCtx *de_ctx, const char *str)
+{
+    SCLogDebug("Run Command Code Parse");
+    DetectDiameterCommandcodeData *dcc = NULL;
+    const char *tmp_str = str;
+    size_t tmp_len = 0;
+    uint8_t found = 0;
+
+    /* We have a correct diameter command code options */
+    dcc = SCCalloc(1, sizeof(DetectDiameterCommandcodeData));
+    if (unlikely(dcc == NULL))
+        goto error;
+
+    // skip leading space
+    while (isspace(tmp_str[0])) {
+        tmp_str++;
+    }
+
+    // "code: 123,456,78,910,"
+    uint32_t num = 0;
+    uint16_t len = 0;
+    while (1) {
+        while (!isspace(tmp_str[tmp_len]) && tmp_str[tmp_len] != ',') {
+            num = num * 10;
+            num += (uint32_t)tmp_str[tmp_len] - 48;
+            tmp_len++;
+        }
+        CommandCode *cmcode = SCCalloc(1, sizeof(CommandCode));
+        SCLogDebug("Insert Command Code rules: %"PRIu32, num);
+        cmcode->commandcode = num;
+        TAILQ_INSERT_TAIL(&dcc->commandcode_list, cmcode, next);
+        num = 0;
+        tmp_len++;
+        if (tmp_str[tmp_len] == 0) break;
+    }
+
+    return dcc;
+
+error:
+    if (dcc != NULL)
+        DetectDiameterCommandcodeFree(de_ctx, dcc);
+    return NULL;
+
+}
+
 
 /**
  * \brief Hàm setup detect Command Code của Diameter
@@ -90,6 +158,12 @@ void DetectDiameterCommandCodeRegister(void)
 */
 static int DetectDiameterCommandCodeSetup(DetectEngineCtx *de_ctx, Signature *s, const char *str)
 {
+    SCLogDebug("Run Command Code Setup");
+    DetectDiameterCommandcodeData *dcc = NULL;
+    SigMatch *sm = NULL;
+
+    sm = SCCalloc(1, sizeof(SigMatch));
+    
     /* store list id. Content, pcre, etc will be added to the list at this id. */
     s->init_data->list = g_diameter_commandcode_id;
 
@@ -98,7 +172,23 @@ static int DetectDiameterCommandCodeSetup(DetectEngineCtx *de_ctx, Signature *s,
     if (DetectSignatureSetAppProto(s, ALPROTO_DIAMETER) != 0)
         return -1;
 
+    dcc = DetectDiameterCommandcodeParse(de_ctx, str);
+    if (dcc == NULL)
+        goto error;
+
+    sm->type = DETECT_AL_DIAMETER_COMMANDCODE;
+    sm->ctx = (void *)dcc;
+
+    SigMatchAppendSMToList(s, sm, g_diameter_commandcode_id);
+
     return 0;
+
+error:
+    if (dcc != NULL)
+        DetectDiameterCommandcodeFree(de_ctx, dcc);
+    if (sm != NULL)
+        SCFree(sm);
+    return -1;
 }
 
 /** \internal
@@ -108,6 +198,7 @@ static int DetectDiameterCommandCodeSetup(DetectEngineCtx *de_ctx, Signature *s,
  *
  *  \retval buffer or NULL in case of error
  */
+/*
 static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
         const DetectEngineTransforms *transforms,
         Flow *_f, const uint8_t flow_flags,
@@ -127,7 +218,7 @@ static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
     }
 
     return buffer;
-}
+}*/
 
 /**
  * \brief This function is used to match Diameter code on a transaction with via diameter.commandcode:
@@ -139,13 +230,26 @@ static int DetectDiameterMatch(DetectEngineThreadCtx *det_ctx,
                                Flow *f, uint8_t flags, void *state, void *txv, const Signature *s,
                                const SigMatchCtx *ctx)
 {
-    // const DetectDiameterStateData *ssd = (const DetectSslStateData *)m;
-    // DiameterTransaction *tx = txv;
-    // if (ctx->data_len <= 20) return 0;
-    // DiameterMessageHeader mess ReadDiameterHeaderData(tx->data, tx->data_len);
-    // if (mess)
+    SCEnter();
 
-    return 0;
+    SCLogNotice("Run Match ...");
+
+    const DiameterState *dstate = (DiameterState *) state;
+    const DetectDiameterCommandcodeData *dcc = (DetectDiameterCommandcodeData *) ctx;
+    DiameterTransaction *tx = txv;
+    if (tx->data_len <= 20) SCReturn(0);
+    DiameterMessageHeader mess = ReadDiameterHeaderData(tx->data, tx->data_len);
+    
+    uint32_t commandcode = mess.CommandCode;
+
+    CommandCode *cmcode;
+    TAILQ_FOREACH(cmcode, &dcc->commandcode_list, next) {
+        if (cmcode->commandcode == commandcode) {
+            SCLogNotice("Found Command Code: %"PRIu32, cmcode->commandcode);
+            SCReturn(1);
+        }
+    }
+    SCReturn(0);
 }
 
 #ifdef UNITTESTS
