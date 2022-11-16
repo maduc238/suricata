@@ -1,4 +1,4 @@
-/* Copyright (C) 2015-2017 Open Information Security Foundation
+/* Copyright (C) 2015-2021 Open Information Security Foundation
  *
  * You can copy, redistribute or modify this Program under the terms of
  * the GNU General Public License version 2 as published by the Free
@@ -18,24 +18,57 @@
 /**
  * \file
  *
- * \author FirstName LastName <yourname@domain>
+ * \author Ma Duc <mavietduc@gmail.com>
  */
 
-#ifndef __DETECT_DIAMETER_FLAGS_H__
-#define __DETECT_DIAMETER_FLAGS_H__
+#ifndef __APP_LAYER_DIAMETER_H__
+#define __APP_LAYER_DIAMETER_H__
 
+#include "rust.h"
 
-#define DIAMETER_FLAG_R 0x80
-#define DIAMETER_FLAG_P 0x40
-#define DIAMETER_FLAG_E 0x20
-#define DIAMETER_FLAG_T 0x10
+void RegisterDiameterParsers(void);
+void DiameterParserRegisterTests(void);
 
-typedef uint8_t DiameterFlagsData;
+#define DIAMETER_FLAG_T (uint32_t)0x10
+#define DIAMETER_FLAG_E (uint32_t)0x20
+#define DIAMETER_FLAG_P (uint32_t)0x40
+#define DIAMETER_FLAG_R (uint32_t)0x80
 
-typedef struct DetectDiameterFlagsData_ {
-    DiameterFlagsData flags;
-} DetectDiameterFlagsData;
+typedef struct DiameterMessageHeader {
+    /* Version of Diameter */
+    uint8_t Version;
+    /* Diameter Length, để  kiểm tra data nhận được có dài đúng như header đọc được không*/
+    uint32_t Length;
+    /* Diameter Flags - Khác của suricata */
+    uint8_t Flags;
+    uint32_t CommandCode;
+    uint32_t ApplicationId;
+    uint32_t HopbyHopId;
+    uint32_t EndtoEndId;
+} DiameterMessageHeader;
+DiameterMessageHeader ReadDiameterHeaderData(uint8_t *data, uint32_t data_len);
+typedef struct DiameterTransaction
+{
+    uint8_t *data;
+    uint32_t data_len;
 
-void DetectDiameterFlagsRegister(void);
+    AppLayerTxData tx_data;
 
-#endif /* __DETECT_DIAMETER_FLAGS_H__ */
+    TAILQ_ENTRY(DiameterTransaction) next;
+
+} DiameterTransaction;
+
+typedef struct DiameterState {
+    AppLayerStateData state_data;
+
+    /** List of Diameter transactions associated with this
+     *  state. */
+    TAILQ_HEAD(, DiameterTransaction) tx_list;
+
+    /** A count of the number of transactions created. The
+     *  transaction ID for each transaction is allocated
+     *  by incrementing this value. */
+    uint64_t transaction_max;
+} DiameterState;
+
+#endif /* __APP_LAYER_DIAMETER_H__ */
