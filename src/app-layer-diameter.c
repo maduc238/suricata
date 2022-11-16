@@ -15,11 +15,6 @@
  * 02110-1301, USA.
  */
 
-/*
- * TODO: Implement your app-layer logic with unit tests.
- * TODO: Remove SCLogNotice statements or convert to debug.
- */
-
 /**
  * \file
  *
