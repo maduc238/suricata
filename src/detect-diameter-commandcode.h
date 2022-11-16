@@ -21,9 +21,27 @@
  * \author FirstName LastName <yourname@domain>
  */
 
+#include "queue.h"
+#include <bits/types.h>
+
+
+typedef __uint8_t uint8_t;
+typedef __uint16_t uint16_t;
+typedef __uint32_t uint32_t;
+typedef __uint64_t uint64_t;
+
 #ifndef __DETECT_DIAMETER_COMMANDCODE_H__
 #define __DETECT_DIAMETER_COMMANDCODE_H__
 
+typedef struct CommandCode {
+    uint32_t commandcode;
+    TAILQ_ENTRY(CommandCode) next;
+} CommandCode;
+
+typedef struct DetectDiameterCommandcodeData {
+    TAILQ_HEAD(, CommandCode) commandcode_list;
+    uint64_t de_max;
+} DetectDiameterCommandcodeData;
 
 void DetectDiameterCommandCodeRegister(void);
 
