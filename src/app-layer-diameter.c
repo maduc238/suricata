@@ -191,7 +191,7 @@ static AppProto DiameterProbingParser(Flow *f, uint8_t direction,
         return ALPROTO_DIAMETER;
     }
     // SCLogInfo("Protocol not detected as ALPROTO_DIAMETER.");
-    return ALPROTO_UNKNOWN;
+    return ALPROTO_FAILED;
 }
 
 /* Decode bản tin đọc header ở đây */
