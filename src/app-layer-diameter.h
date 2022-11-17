@@ -1,4 +1,4 @@
-/* Copyright (C) 2015-2021 Open Information Security Foundation
+/* Copyright (C) 2015-2022 Open Information Security Foundation
  *
  * You can copy, redistribute or modify this Program under the terms of
  * the GNU General Public License version 2 as published by the Free
@@ -47,23 +47,24 @@ typedef struct DiameterTransaction
     uint8_t *data;
     uint32_t data_len;
 
-    AppLayerTxData tx_data;
-
     TAILQ_ENTRY(DiameterTransaction) next;
 
 } DiameterTransaction;
 
 typedef struct DiameterState {
     AppLayerStateData state_data;
+    AppLayerTxData tx_data;
+    uint8_t *data;
+    uint32_t data_len;
 
     /** List of Diameter transactions associated with this
      *  state. */
-    TAILQ_HEAD(, DiameterTransaction) tx_list;
+    // TAILQ_HEAD(, DiameterTransaction) tx_list;
 
     /** A count of the number of transactions created. The
      *  transaction ID for each transaction is allocated
      *  by incrementing this value. */
-    uint64_t transaction_max;
+    // uint64_t transaction_max;
 } DiameterState;
 
 #endif /* __APP_LAYER_DIAMETER_H__ */
