@@ -1,4 +1,4 @@
-/* Copyright (C) 2015-2021 Open Information Security Foundation
+/* Copyright (C) 2015-2022 Open Information Security Foundation
  *
  * You can copy, redistribute or modify this Program under the terms of
  * the GNU General Public License version 2 as published by the Free
@@ -95,6 +95,7 @@ DiameterMessageHeader ReadDiameterHeaderData(uint8_t *data, uint32_t data_len) {
     return message;
 }
 
+/*
 static DiameterTransaction *DiameterTxAlloc(DiameterState *state)
 {
     DiameterTransaction *tx = SCCalloc(1, sizeof(DiameterTransaction));
@@ -102,26 +103,27 @@ static DiameterTransaction *DiameterTxAlloc(DiameterState *state)
         return NULL;
     }
 
-    /* Increment the transaction ID on the state each time one is llocated. */
+    // Increment the transaction ID on the state each time one is llocated.
     // state->transaction_max++;
 
     TAILQ_INSERT_TAIL(&state->tx_list, tx, next);
 
     return tx;
-}
+} */
 
+/*
 static void DiameterTxFree(void *txv)
 {
-    DiameterTransaction *tx = txv;
-
-    if (tx->data != NULL) {
-        SCFree(tx->data);
-    }
+    DiameterState *d_state = (DiameterState *)txv;
 
     AppLayerDecoderEventsFreeEvents(&tx->tx_data.events);
 
-    SCFree(tx);
-}
+    if (d_state->tx_data.de_state != NULL) {
+        DetectEngineStateFree(d_state->tx_data.de_state);
+    }
+
+    SCFree(d_state);
+} */
 
 static void *DiameterStateAlloc(void *orig_state, AppProto proto_orig)
 {
@@ -130,18 +132,18 @@ static void *DiameterStateAlloc(void *orig_state, AppProto proto_orig)
     if (unlikely(state == NULL)) {
         return NULL;
     }
-    TAILQ_INIT(&state->tx_list);
     return state;
 }
 static void DiameterStateFree(void *state)
 {
     DiameterState *diameter_state = state;
-    DiameterTransaction *tx;
+    // DiameterTransaction *tx;
     SCLogNotice("Freeing diameter state.");
+    /*
     while ((tx = TAILQ_FIRST(&diameter_state->tx_list)) != NULL) {
         TAILQ_REMOVE(&diameter_state->tx_list, tx, next);
         DiameterTxFree(tx);
-    }
+    } */
     SCFree(diameter_state);
 }
 
@@ -186,11 +188,17 @@ static AppProto DiameterProbingParser(Flow *f, uint8_t direction,
         const uint8_t *input, uint32_t input_len, uint8_t *rdir)
 {
     /* Kiểm tra Diameter ở đây. */
-    if (input_len > DIAMETER_MIN_FRAME_LEN) {
-        // SCLogNotice("Detected as ALPROTO_DIAMETER");
+    if (input_len <= DIAMETER_MIN_FRAME_LEN) {
+        SCLogInfo("Detected as ALPROTO_UNKNOWN!");
+        return ALPROTO_UNKNOWN;
+    }
+
+    if (input[0] == 0x01) {
+        SCLogNotice("Detected as ALPROTO_DIAMETER");
         return ALPROTO_DIAMETER;
     }
-    // SCLogInfo("Protocol not detected as ALPROTO_DIAMETER.");
+
+    SCLogInfo("Protocol not detected as ALPROTO_DIAMETER.");
     return ALPROTO_FAILED;
 }
 
@@ -198,7 +206,7 @@ static AppProto DiameterProbingParser(Flow *f, uint8_t direction,
 static AppLayerResult DiameterDecode(Flow *f, uint8_t direction, void *alstate,
         AppLayerParserState *pstate, StreamSlice stream_slice)
 {
-    DiameterState *state = (DiameterState *)alstate;
+    DiameterState *d_state = (DiameterState *)alstate;
     const uint8_t *input = StreamSliceGetData(&stream_slice);
     uint32_t input_len = StreamSliceGetDataLen(&stream_slice);
     // const uint8_t flags = StreamSliceGetFlags(&stream_slice);
@@ -207,37 +215,39 @@ static AppLayerResult DiameterDecode(Flow *f, uint8_t direction, void *alstate,
         ((direction == 0 && AppLayerParserStateIssetFlag(pstate, APP_LAYER_PARSER_EOF_TS)) ||
                 (direction == 1 &&
                         AppLayerParserStateIssetFlag(pstate, APP_LAYER_PARSER_EOF_TC)))) {
-        SCReturnStruct(APP_LAYER_OK);
+        return APP_LAYER_OK;
     } else if (input == NULL || input_len == 0) {
-        SCReturnStruct(APP_LAYER_ERROR);
+        return APP_LAYER_ERROR;
     }
-
 
     /* Check có đúng là Diameter không */
     DiameterMessageHeader diameter_header = ReadDiameterHeaderData(input, input_len);
     if (diameter_header.Length != input_len) {
         SCLogNotice("Bản tin Diameter nhận diện không đúng");
-        SCReturnStruct(APP_LAYER_ERROR);
+        return APP_LAYER_ERROR;
     }
     SCLogNotice("Parsing diameter message: len=%"PRIu32". CommandCode=%"PRIu32, input_len, diameter_header.CommandCode);
     // SCLogNotice("Transaction max=%"PRIu64, state->transaction_max);
 
     /* Tạo Tx cho bản tin này */
+    /*
     DiameterTransaction *tx = DiameterTxAlloc(state);
     if (unlikely(tx == NULL)) {
         SCLogNotice("Failed to allocate new Diameter tx.");
         goto end;
-    }
+    } */
 
     /* Make a copy of the message. */
-    tx->data = SCCalloc(1, input_len);
+    d_state->data = SCCalloc(1, input_len);
+    /*
     if (unlikely(tx->data == NULL)) {
         goto end;
-    }
-    memcpy(tx->data, input, input_len);
-    tx->data_len = input_len;
-end:
-    SCReturnStruct(APP_LAYER_OK);
+    }*/
+
+    memcpy(d_state->data, input, input_len);
+    d_state->data_len = input_len;
+
+    return APP_LAYER_OK;
 }
 
 static AppLayerResult DiameterParseRequest(Flow *f, void *alstate, AppLayerParserState *pstate,
@@ -260,14 +270,11 @@ static void DiameterStateTxFree(void *state, uint64_t tx_id)
 
 static uint64_t DiameterGetTxCnt(void *statev)
 {
-    const DiameterState *state = statev;
-    return state->transaction_max;
+    return 1;
 }
 
 static int DiameterGetStateProgress(void *txv, uint8_t direction)
 {
-    DiameterTransaction *tx = txv;
-
     if (direction & STREAM_TOCLIENT) {
         return 1;
     }
@@ -289,8 +296,8 @@ static void *DiameterGetTx(void *state, uint64_t tx_id)
  */
 static AppLayerTxData *DiameterGetTxData(void *vtx)
 {
-    DiameterTransaction *tx = vtx;
-    return &tx->tx_data;
+    DiameterState *d_state = (DiameterState *)vtx;
+    return &d_state->tx_data;
 }
 
 /**
@@ -298,7 +305,7 @@ static AppLayerTxData *DiameterGetTxData(void *vtx)
  */
 static AppLayerStateData *DiameterGetStateData(void *vstate)
 {
-    DiameterState *state = vstate;
+    DiameterState *state = (DiameterState *)vstate;
     return &state->state_data;
 }
 
@@ -308,25 +315,20 @@ void RegisterDiameterParsers(void)
 
     /* Check if Diameter TCP detection is enabled. If it does not exist in
      * the configuration file then it will be disabled by default. */
-    if (AppLayerProtoDetectConfProtoDetectionEnabledDefault("tcp", proto_name, false)) {
-
-        SCLogDebug("Diameter TCP protocol detection enabled.");
-
+    if (AppLayerProtoDetectConfProtoDetectionEnabled("tcp", proto_name)) {
         AppLayerProtoDetectRegisterProtocol(ALPROTO_DIAMETER, proto_name);
+        SCLogDebug("Diameter TCP protocol detection enabled.");
 
         if (RunmodeIsUnittests()) {
             SCLogNotice("Unittest mode, registering default configuration.");
             AppLayerProtoDetectPPRegister(IPPROTO_TCP, DIAMETER_DEFAULT_PORT, ALPROTO_DIAMETER, 0, DIAMETER_MIN_FRAME_LEN, STREAM_TOSERVER, DiameterProbingParser, NULL);
         }
         else {
-            if (!AppLayerProtoDetectPPParseConfPorts("tcp", IPPROTO_TCP, proto_name, ALPROTO_DIAMETER, 0, DIAMETER_MIN_FRAME_LEN, DiameterProbingParser, NULL))
-            {
+            if (!AppLayerProtoDetectPPParseConfPorts("tcp", IPPROTO_TCP, proto_name, ALPROTO_DIAMETER, 0, DIAMETER_MIN_FRAME_LEN, DiameterProbingParser, NULL)) {
                 SCLogDebug("No diameter app-layer configuration, enabling echo detection TCP detection on port %s.", DIAMETER_DEFAULT_PORT);
                 AppLayerProtoDetectPPRegister(IPPROTO_TCP, DIAMETER_DEFAULT_PORT, ALPROTO_DIAMETER, 0, DIAMETER_MIN_FRAME_LEN, STREAM_TOSERVER, DiameterProbingParser, NULL);
             }
-
         }
-
     }
 
     else {
@@ -338,21 +340,16 @@ void RegisterDiameterParsers(void)
 
         SCLogNotice("Registering Diameter protocol parser.");
 
-        /* Register functions for state allocation and freeing. A
-         * state is allocated for every new Diameter flow. */
         AppLayerParserRegisterStateFuncs(IPPROTO_TCP, ALPROTO_DIAMETER, DiameterStateAlloc, DiameterStateFree);
 
-        /* Register request parser for parsing frame from server to client. */
         AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_DIAMETER, STREAM_TOSERVER, DiameterParseRequest);
-
-        /* Register response parser for parsing frames from server to client. */
         AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_DIAMETER, STREAM_TOCLIENT, DiameterParseResponse);
 
-        /* Register a function to be called by the application layer when a transaction is to be freed. */
         AppLayerParserRegisterTxFreeFunc(IPPROTO_TCP, ALPROTO_DIAMETER, DiameterStateTxFree);
-
-        /* Register a function to return the current transaction count. */
         AppLayerParserRegisterGetTxCnt(IPPROTO_TCP, ALPROTO_DIAMETER, DiameterGetTxCnt);
+
+        AppLayerParserRegisterParserAcceptableDataDirection(IPPROTO_TCP, ALPROTO_DIAMETER, STREAM_TOSERVER);
+        // AppLayerParserRegisterParserAcceptableDataDirection(IPPROTO_TCP, ALPROTO_TLS, STREAM_TOSERVER);
 
         /* Transaction handling. */
         AppLayerParserRegisterStateProgressCompletionStatus(ALPROTO_DIAMETER, 1, 1);
@@ -364,7 +361,7 @@ void RegisterDiameterParsers(void)
         AppLayerParserRegisterGetEventInfoById(IPPROTO_TCP, ALPROTO_DIAMETER, DiameterStateGetEventInfoById);
 
         /* Leave this is if your parser can handle gaps, otherwise remove. */
-        AppLayerParserRegisterOptionFlags(IPPROTO_TCP, ALPROTO_DIAMETER, APP_LAYER_PARSER_OPT_ACCEPT_GAPS);
+        // AppLayerParserRegisterOptionFlags(IPPROTO_TCP, ALPROTO_DIAMETER, APP_LAYER_PARSER_OPT_ACCEPT_GAPS);
     }
     else {
         SCLogDebug("Diameter protocol parsing disabled.");
