@@ -57,10 +57,8 @@ void DetectDiameterCommandCodeRegister(void)
 {
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].name = "diameter_commandcode";
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].desc = "Match on Diameter Command Code";
-    sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].url = "/rules/diameter-keywords/html#diameter_commandcode";
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].AppLayerTxMatch = DetectDiameterMatch;
     // sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].Match = DetectDiameterMatch;
-    // sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].Match = DetectTemplateMatch;
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].Setup = DetectDiameterCommandCodeSetup;
     sigmatch_table[DETECT_AL_DIAMETER_COMMANDCODE].Free = DetectDiameterCommandcodeFree;
 #ifdef UNITTESTS
@@ -184,8 +182,6 @@ static int DetectDiameterCommandCodeSetup(DetectEngineCtx *de_ctx, Signature *s,
     sm->ctx = (void *)dcc;
 
     SigMatchAppendSMToList(s, sm, g_diameter_commandcode_id);
-    // s->flags |= SIG_FLAG_REQUIRE_PACKET;
-
     return 0;
 
 error:
@@ -203,6 +199,7 @@ error:
  *
  *  \retval buffer or NULL in case of error
  */
+/*
 static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
         const DetectEngineTransforms *transforms,
         Flow *_f, const uint8_t flow_flags,
@@ -222,7 +219,7 @@ static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
     }
 
     return buffer;
-}
+}*/
 
 /**
  * \brief This function is used to match Diameter code on a transaction with via diameter_commandcode:
@@ -234,14 +231,14 @@ static int DetectDiameterMatch(DetectEngineThreadCtx *det_ctx,
                                Flow *f, uint8_t flags, void *state, void *txv, const Signature *s,
                                const SigMatchCtx *ctx)
 {
+    SCEnter();
     SCLogNotice("Run Match ...");
 
     const DiameterState *dstate = (DiameterState *) state;
     const DetectDiameterCommandcodeData *dcc = (DetectDiameterCommandcodeData *) ctx;
-    // DiameterTransaction *tx = TAILQ_FIRST(&dstate->tx_list);
-    DiameterTransaction *tx = (DiameterTransaction *) txv;
-    if (tx->data_len <= 20) return 0;
-    DiameterMessageHeader mess = ReadDiameterHeaderData(tx->data, tx->data_len);
+
+    if (dstate->data_len <= 20) SCReturnInt(0);
+    DiameterMessageHeader mess = ReadDiameterHeaderData(dstate->data, dstate->data_len);
     
     uint32_t commandcode = mess.CommandCode;
     SCLogNotice("Read command code data: %"PRIu32, commandcode);
@@ -250,10 +247,10 @@ static int DetectDiameterMatch(DetectEngineThreadCtx *det_ctx,
     TAILQ_FOREACH(cmcode, &dcc->commandcode_list, next) {
         if (cmcode->commandcode == commandcode) {
             SCLogNotice("Found Command Code: %"PRIu32, cmcode->commandcode);
-            return 1;
+            SCReturnInt(1);
         }
     }
-    return 0;
+    SCReturnInt(0);
 }
 
 /**
