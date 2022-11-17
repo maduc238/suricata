@@ -18,31 +18,53 @@
 /**
  * \file
  *
- * \author FirstName LastName <yourname@domain>
+ * \author Ma Duc <mavietduc@gmail.com>
  */
 
-#include "queue.h"
-#include <bits/types.h>
+#ifndef __APP_LAYER_DIAMETER_H__
+#define __APP_LAYER_DIAMETER_H__
 
+#include "rust.h"
 
-typedef __uint8_t uint8_t;
-typedef __uint16_t uint16_t;
-typedef __uint32_t uint32_t;
-typedef __uint64_t uint64_t;
+void RegisterDiameterParsers(void);
+void DiameterParserRegisterTests(void);
 
-#ifndef __DETECT_DIAMETER_COMMANDCODE_H__
-#define __DETECT_DIAMETER_COMMANDCODE_H__
+typedef struct DiameterMessageHeader {
+    /* Version of Diameter */
+    uint8_t Version;
+    /* Diameter Length, để  kiểm tra data nhận được có dài đúng như header đọc được không*/
+    uint32_t Length;
+    /* Diameter Flags - Khác của suricata */
+    uint8_t Flags;
+    uint32_t CommandCode;
+    uint32_t ApplicationId;
+    uint32_t HopbyHopId;
+    uint32_t EndtoEndId;
+} DiameterMessageHeader;
+DiameterMessageHeader ReadDiameterHeaderData(uint8_t *data, uint32_t data_len);
+typedef struct DiameterTransaction
+{
+    uint8_t *data;
+    uint32_t data_len;
 
-typedef struct CommandCode {
-    uint32_t commandcode;
-    TAILQ_ENTRY(CommandCode) next;
-} CommandCode;
+    TAILQ_ENTRY(DiameterTransaction) next;
 
-typedef struct DetectDiameterCommandcodeData {
-    TAILQ_HEAD(, CommandCode) commandcode_list;
-    uint64_t de_max;
-} DetectDiameterCommandcodeData;
+} DiameterTransaction;
 
-void DetectDiameterCommandCodeRegister(void);
+typedef struct DiameterState {
+    AppLayerStateData state_data;
+    AppLayerTxData tx_data;
+    uint8_t *data;
+    uint32_t data_len;
 
-#endif /* __DETECT_DIAMETER_COMMANDCODE_H__ */
+    /** List of Diameter transactions associated with this
+     *  state. */
+    // TAILQ_HEAD(, DiameterTransaction) tx_list;
+
+    /** A count of the number of transactions created. The
+     *  transaction ID for each transaction is allocated
+     *  by incrementing this value. */
+    // uint64_t transaction_max;
+} DiameterState;
+
+#endif /* __APP_LAYER_DIAMETER_H__ */
