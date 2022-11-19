@@ -16,9 +16,9 @@
  */
 
 /**
- * \file
+ * \file detect-diameter-commandcode.h
  *
- * \author FirstName LastName <yourname@domain>
+ * \author Ma Duc <mavietduc@gmail.com>
  */
 
 #include "queue.h"
