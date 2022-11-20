@@ -70,6 +70,8 @@
 #include "detect-engine-iponly.h"
 #include "app-layer-detect-proto.h"
 
+#include "action-globals.h"
+
 /* Table with all SigMatch registrations */
 SigTableElmt sigmatch_table[DETECT_TBLSIZE];
 
@@ -2619,6 +2621,9 @@ void DetectSetupParseRegexes(const char *parse_str, DetectParseRegex *detect_par
  */
 
 #ifdef UNITTESTS
+#include "detect-engine-alert.h"
+#include "packet.h"
+
 static int SigParseTest01 (void)
 {
     int result = 1;

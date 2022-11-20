@@ -235,9 +235,9 @@ bool DetectUrilenValidateContent(const Signature *s, int list, const char **sige
 #include "stream.h"
 #include "stream-tcp-private.h"
 #include "stream-tcp-reassemble.h"
-#include "detect-engine.h"
 #include "detect-engine-mpm.h"
 #include "app-layer-parser.h"
+#include "detect-engine-alert.h"
 
 /** \test   Test the Urilen keyword setup */
 static int DetectUrilenParseTest01(void)

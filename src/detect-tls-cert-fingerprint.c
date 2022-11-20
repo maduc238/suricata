@@ -41,7 +41,6 @@
 #include "flow-var.h"
 
 #include "util-debug.h"
-#include "util-unittest.h"
 #include "util-spm.h"
 #include "util-print.h"
 
@@ -226,5 +225,6 @@ static void DetectTlsFingerprintSetupCallback(const DetectEngineCtx *de_ctx,
 }
 
 #ifdef UNITTESTS
+#include "detect-engine-alert.h"
 #include "tests/detect-tls-cert-fingerprint.c"
 #endif

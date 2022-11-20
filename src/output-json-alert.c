@@ -55,7 +55,6 @@
 #include "app-layer-frames.h"
 #include "util-classification-config.h"
 #include "util-syslog.h"
-#include "util-logopenfile.h"
 #include "log-pcap.h"
 
 #include "output.h"
@@ -87,6 +86,8 @@
 #include "util-optimize.h"
 #include "util-buffer.h"
 #include "util-validate.h"
+
+#include "action-globals.h"
 
 #define MODULE_NAME "JsonAlertLog"
 
