@@ -21,18 +21,28 @@
  * \author FirstName LastName <yourname@domain>
  */
 
+#include <app-layer-diameter.h>
+
 #ifndef __DETECT_DIAMETER_FLAGS_H__
 #define __DETECT_DIAMETER_FLAGS_H__
 
 #define MAX_NUM_FLAG 4
 
-typedef struct DiameterFlagKeywords__ {
-    char* keyWord;
+typedef struct DiameterFlagKeywords {
+    const char* keyWord;
     uint8_t value;
 } DiameterFlagKeywords;
 
+enum {
+    T_FLAG_POSIONTION = 0,
+    E_FLAG_POSIONTION = 1,
+    P_FLAG_POSIONTION = 2,
+    R_FLAG_POSIONTION = 3,
+};
+
+
 typedef uint8_t DiameterFlagsData;
 
-void DetectDiameterflagsRegister(void);
+void DetectDiameterFlagsRegister(void);
 
 #endif /* __DETECT_DIAMETER_FLAGS_H__ */
