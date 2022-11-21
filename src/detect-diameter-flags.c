@@ -41,18 +41,17 @@
 #include "detect-diameter-flags.h"
 
 DiameterFlagKeywords DiameterFlagsKeywordsList[MAX_NUM_FLAG] = {
-    {"t", T_FLAG_POSIONTION, DIAMETER_FLAG_T},
-    {"e", E_FLAG_POSIONTION, DIAMETER_FLAG_E},
-    {"p", P_FLAG_POSIONTION, DIAMETER_FLAG_P},
-    {"r", R_FLAG_POSIONTION, DIAMETER_FLAG_R},
+    {"t", DIAMETER_FLAG_T},
+    {"e", DIAMETER_FLAG_E},
+    {"p", DIAMETER_FLAG_P},
+    {"r", DIAMETER_FLAG_R},
 };
 
 static int DetectDiameterflagsSetup(DetectEngineCtx *, Signature *, const char *);
 static DiameterFlagsData* DetectDiameterFlagsParseSign(DetectEngineCtx *de_ctx, const char *sign);
 static void DetectDiameterFlagsFree(DetectEngineCtx *de_ctx, void *ptr);
-static int DiameterFlagsMatch(DetectEngineThreadCtx *,
-        Flow *, uint8_t, void *, void *,
-        const Signature *, const SigMatchCtx *);
+static int DiameterFlagsMatch(DetectEngineThreadCtx *det_ctx, Packet *p,
+        const Signature *s, const SigMatchCtx *m);
 // static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
 //         const DetectEngineTransforms *transforms,
 //         Flow *_f, const uint8_t flow_flags,
@@ -64,11 +63,11 @@ static int g_diameter_flags_id = 0;
 
 void DetectDiameterFlagsRegister(void)
 {
-    sigmatch_table[DETECT_AL_DIAMETER_FLAGS].name = "diameter_flags";
+    sigmatch_table[DETECT_AL_DIAMETER_FLAGS].name = "diameter.flags";
     sigmatch_table[DETECT_AL_DIAMETER_FLAGS].desc =
             "Diameter content modifier to match on the diameter buffers";
     sigmatch_table[DETECT_AL_DIAMETER_FLAGS].Setup = DetectDiameterflagsSetup;
-    sigmatch_table[DETECT_AL_DIAMETER_FLAGS].AppLayerTxMatch = DiameterFlagsMatch;
+    sigmatch_table[DETECT_AL_DIAMETER_FLAGS].Match = DiameterFlagsMatch;
     sigmatch_table[DETECT_AL_DIAMETER_FLAGS].Free  = DetectDiameterFlagsFree;
 #ifdef UNITTESTS
     sigmatch_table[DETECT_AL_DIAMETER_FLAGS].RegisterTests =
@@ -77,13 +76,13 @@ void DetectDiameterFlagsRegister(void)
 
     // sigmatch_table[DETECT_AL_DIAMETER_FLAGS].flags |= SIGMATCH_NOOPT;
 
-    /* register inspect engines - these are called per signature */
-    // DetectAppLayerInspectEngineRegister2("diameter_flags",
+    // /* register inspect engines - these are called per signature */
+    // DetectAppLayerInspectEngineRegister2("diameter.flags",
     //         ALPROTO_DIAMETER, SIG_FLAG_TOSERVER, 0,
-    //         DetectEngineInspectBufferGeneric, GetData);
-    // DetectAppLayerInspectEngineRegister2("diameter_flags",
+    //         DetectEngineInspectGenericList, NULL);
+    // DetectAppLayerInspectEngineRegister2("diameter.flags",
     //         ALPROTO_DIAMETER, SIG_FLAG_TOCLIENT, 0,
-    //         DetectEngineInspectBufferGeneric, GetData);
+    //         DetectEngineInspectGenericList, NULL);
 
     // /* register mpm engines - these are called in the prefilter stage */
     // DetectAppLayerMpmRegister2("diameter_flags", SIG_FLAG_TOSERVER, 0,
@@ -94,7 +93,7 @@ void DetectDiameterFlagsRegister(void)
     //         ALPROTO_DIAMETER, 0);
 
 
-    g_diameter_flags_id = DetectBufferTypeGetByName("diameter_flags");
+    // g_diameter_flags_id = DetectBufferTypeGetByName("diameter.flags");
 
     /* NOTE: You may want to change this to SCLogNotice during development. */
     SCLogNotice("Diameter application layer detect flags registered.");
@@ -106,13 +105,14 @@ static int DetectDiameterflagsSetup(DetectEngineCtx *de_ctx, Signature *s, const
     DiameterFlagsData* flags = NULL;
     SigMatch *sm = NULL;
 
-    s->init_data->list = g_diameter_flags_id;
+    // s->init_data->list = g_diameter_flags_id;
     /* set the app proto for this signature. This means it will only be
      * evaluated against flows that are ALPROTO_DIAMETER */
     if (DetectSignatureSetAppProto(s, ALPROTO_DIAMETER) != 0)
         return -1;
 
     flags = DetectDiameterFlagsParseSign(de_ctx, sign);
+    // SCLogNotice("%x.....................................",*flags);
     if (flags == NULL)
         goto error;
     sm = SigMatchAlloc();
@@ -122,8 +122,9 @@ static int DetectDiameterflagsSetup(DetectEngineCtx *de_ctx, Signature *s, const
     
     sm->type = DETECT_AL_DIAMETER_FLAGS;
     sm->ctx = (void *)flags;
-    SigMatchAppendSMToList(s, sm, g_diameter_flags_id);
-    SCLogNotice("flagsetupaa");
+    SigMatchAppendSMToList(s, sm, DETECT_SM_LIST_MATCH);
+    s->flags |= SIG_FLAG_REQUIRE_PACKET;
+    SCLogNotice("setup.............................");
     return 0;
 error:
     if (flags != NULL)
@@ -131,12 +132,11 @@ error:
     if (sm != NULL)
         SCFree(sm);
     return -1;
-    return 0;
 }
 
 
 static DiameterFlagsData* DetectDiameterFlagsParseSign(DetectEngineCtx *de_ctx, const char *sign) {
-    SCLogNotice("parsesign");
+    SCLogNotice("parsesign...........................");
     DiameterFlagsData *flags = NULL;
     const char* tmp_sign = sign;
 
@@ -194,32 +194,28 @@ error:
     return NULL;
 } 
 
-static int DiameterFlagsMatch(DetectEngineThreadCtx *det_ctx,
-        Flow *f, uint8_t flags, void *state, void *txv,
+static int DiameterFlagsMatch(DetectEngineThreadCtx *det_ctx, Packet *p,
         const Signature *s, const SigMatchCtx *m)
 {
-    SCLogNotice("flagsmatch");
     SCEnter();
+    uint8_t flag = 0;
 
-    uint32_t flag = 0;
-
-    const DiameterFlagsData *signFlags = (const DiameterFlagsData *)m;
-    DiameterState *app_state = (DiameterState *)state;
-    if (app_state == NULL) {
-        SCLogDebug("no diameter app state, no match");
-        SCReturnInt(0);
+    DiameterFlagsData *signFlags = (DiameterFlagsData *)m;
+    if (PKT_IS_TCP(p) && p->payload_len > 20) {
+        flag =  (DiameterFlagsData) p->payload[4];
+        SCLogNotice("keyword value = %x, flag value in packet = %x", *signFlags, flag); 
+        if (flag == *signFlags) {     
+            SCReturn(1);
+        }
+        SCReturn(0);
+    } else {
+        return 0;
     }
-
-    DiameterTransaction *ttx = (DiameterTransaction*) txv;
-    flag =  (DiameterFlagsData)ttx->data[4];
-
-    if (flag == *signFlags) 
-        SCReturn(1);
-    SCReturn(0);
 }
 
 void DetectDiameterFlagsFree(DetectEngineCtx *de_ctx, void *ptr)
 {
+    SCLogNotice("free.............................");
     if (ptr != NULL)
         SCFree(ptr);
 }
